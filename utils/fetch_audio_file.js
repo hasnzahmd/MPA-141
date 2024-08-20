@@ -7,7 +7,7 @@ import { fileTypeFromStream } from 'file-type';
 
 export const fetchAudioFile = async (audio_url) => {
     try {
-        console.log('>>>>>> Fetching audio file');
+        console.log('>>>>>> Downloading audio file <<<<<<');
         const response = await fetch(audio_url);
         if (!response.ok) {
             throw new Error(`Failed to fetch audio file: ${response.statusText}`);
@@ -28,7 +28,8 @@ export const fetchAudioFile = async (audio_url) => {
             response.body.on('error', reject);
             fileStream.on('finish', resolve);
         });
-        console.log('>>>>>> File path:', audioFilePath);
+        console.log('File path:', audioFilePath);
+        console.log('>>>>>> Download complete <<<<<<');
         return audioFilePath;
     } catch (error) {
         console.error(`Error fetching audio file: ${error.message}`);
