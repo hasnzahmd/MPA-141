@@ -1,5 +1,6 @@
 import express from 'express';
 import { fetchAudioFile } from '../utils/fetch_audio_file.js';
+import { transcribeAudio } from '../utils/transcribe_audio.js';
 
 export const reportRouter = express.Router();
 
@@ -8,14 +9,17 @@ reportRouter.post('/', async (req, res) => {
 
     try {
         const audioFilePath = await fetchAudioFile(audio_url); 
+        const transcript = await transcribeAudio(audioFilePath);
 
-        // const transcription = await transcribeAudio(audioData);
+        //const structuredReport = await generateStructuredReport(transcript, fields);
 
-        // const structuredReport = await generateStructuredReport(transcription, fields);
-
-        //res.json(structuredReport);
-        res.json({ message: 'Medical report generated successfully' });
+        res.status(200).json({
+            message: 'success',
+            audioFilePath,
+            transcript,
+        });
     } catch (error) {
-        res.status(500).json({ error: 'Error generating medical report' });
+        console.error('Error generating medical report:', error.message);
+        res.status(500).json({ error: `Error generating medical report: ${error.message}` });
     }
 });
