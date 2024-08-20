@@ -1,12 +1,3 @@
-export const audioTypes = [
-    'audio/flac',
-    'audio/mp4',
-    'audio/mpeg',
-    'audio/ogg',
-    'audio/wav',
-    'audio/webm'
-];
-
 export const generationContext = `
 <PERSONA>
 

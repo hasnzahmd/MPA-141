@@ -32,7 +32,7 @@ export const fetchAudioFile = async (audio_url) => {
         console.log('>>>>>> Download complete <<<<<<');
         return audioFilePath;
     } catch (error) {
-        console.error(`Error fetching audio file: ${error.message}`);
+        console.error(`Error fetching audio file`);
         throw error;
     }
 };

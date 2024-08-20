@@ -1,5 +1,5 @@
 import { createClient } from "@deepgram/sdk";
-const deepgram = createClient('c592eb28a418b5a67842162de94bce46703e33c7');
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 import fs from 'fs';
 
 export const transcribeAudio = async (filePath, model = 'nova', language = 'en') => {
@@ -27,7 +27,7 @@ export const transcribeAudio = async (filePath, model = 'nova', language = 'en')
         return transcript;
 
     } catch (error) {
-        console.error('Error transcribing audio:', error.message);
+        console.error('Error transcribing audio');
         throw error;
     }
 }
