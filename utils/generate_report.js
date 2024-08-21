@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { generationContext } from "./constants.js";
+import { generationContext, input } from "./constants.js";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -8,16 +8,17 @@ const openai = new OpenAI({
 export async function generateStructuredReport(transcript, fields) {
     try {
         console.log('\n>>>>>> Generating JSON response <<<<<<');
-        const prompt = generationContext.replace('{transcription}', transcript);
-        const formattedPrompt = `${prompt} - Please structure the report as a JSON object with the following keys only: ${fields.join(', ')}, and "other" for unspecified content.`;
+        const formattedPrompt = input
+            .replace('{transcription}', transcript)
+            .replace('{fields}', fields.join(', '))
 
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
-                { role: "system", content: "You are a highly skilled medical transcriptionist." },
+                { role: "system", content: generationContext },
                 { role: "user", content: formattedPrompt }
             ],
-            temperature: 0.2,
+            temperature: 0,
         });
         console.log('Response message content:', response.choices[0].message.content);
 
