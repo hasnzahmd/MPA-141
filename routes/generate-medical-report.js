@@ -9,8 +9,8 @@ reportRouter.post('/', async (req, res) => {
     const { audio_url, fields } = req.body;
 
     try {
-        const audioFilePath = await fetchAudioFile(audio_url); 
-        const transcript = await transcribeAudio(audioFilePath);
+        const audioBuffer = await fetchAudioFile(audio_url);
+        const transcript = await transcribeAudio(audioBuffer);
         const structuredReport = await generateStructuredReport(transcript, fields);
 
         res.status(200).json(structuredReport);

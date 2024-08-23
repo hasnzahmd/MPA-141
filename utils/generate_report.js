@@ -20,8 +20,7 @@ export async function generateStructuredReport(transcript, fields) {
             ],
             temperature: 0,
         });
-        console.log('Response message content:', response.choices[0].message.content);
-
+        
         let cleanedContent = response.choices[0].message.content.trim();
 
         if (cleanedContent.startsWith("```json")) {
