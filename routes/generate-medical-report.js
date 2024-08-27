@@ -10,10 +10,10 @@ reportRouter.post('/', async (req, res) => {
 
     try {
         const audioBuffer = await fetchAudioFile(audio_url);
-        const transcript = await transcribeAudio(audioBuffer);
-        const structuredReport = await generateStructuredReport(transcript, fields);
+        const transcripts = await transcribeAudio(audioBuffer);
+        //const structuredReport = await generateStructuredReport(transcript, fields);
 
-        res.status(200).json(structuredReport);
+        res.status(200).json(transcripts);
     } catch (error) {
         console.error('Error generating medical report:', error.message);
         res.status(500).json({ error: `Error generating medical report: ${error.message}` });

@@ -9,7 +9,8 @@ export const fetchAudioFile = async (audio_url) => {
             throw new Error(`Failed to fetch audio file: ${response.statusText}`);
         }
 
-        const buffer = await response.arrayBuffer();
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
         const fileType = await fileTypeFromBuffer(buffer);
         console.log('file type:', fileType);
