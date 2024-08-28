@@ -10,6 +10,7 @@ const assemblyAiClient = new AssemblyAI({
 
 var revAiClient = new RevAiApiClient(process.env.REV_AI_API_KEY);
 
+let detected_language;
 
 const convertAudioToTranscript = async (audioBuffer, model) => {
     try {
@@ -34,7 +35,7 @@ const convertAudioToTranscript = async (audioBuffer, model) => {
         }
 
         if (model == "assembly_ai") {
-            const { text, confidence, error } = await assemblyAiClient.transcripts.transcribe({
+            const { text, confidence, error, language_code } = await assemblyAiClient.transcripts.transcribe({
                 audio: audioBuffer,
                 language_detection: true,
                 format_text: false
@@ -43,6 +44,9 @@ const convertAudioToTranscript = async (audioBuffer, model) => {
             if (error) {
                 throw error
             }
+
+            detected_language = language_code;
+
             return {
                 result: text,
                 confidence,
@@ -60,10 +64,9 @@ const convertAudioToTranscript = async (audioBuffer, model) => {
                 jobStatus = await revAiClient.getJobDetails(job.id);
             }
             //console.log("Rev AI done waiting. jobStatus.status: ", jobStatus.status)
-            var transcriptObject = await revAiClient.getTranscriptText(job.id);
-            //console.log("Rev AI transcriptObject: ", transcriptObject)
+            const text = await revAiClient.getTranscriptText(job.id);
             return {
-                result: transcriptObject,
+                result: text,
                 confidence: 0,
                 model,
             }
@@ -91,11 +94,15 @@ export const transcribeAudio = async (audioBuffer) => {
         ]);
 
         console.log('>>>>>> Transcripts generation complete <<<<<<');
+        const transcriptions = {
+            nova_transcription: nova_transcription.result,
+            whisper_transcription: whisper_transcription.result,
+            assembly_ai_transcription: assembly_ai_transcription.result,
+            rev_ai_transcription: rev_ai_transcription.result,
+        };
         return {
-            nova_transcription,
-            whisper_transcription,
-            assembly_ai_transcription,
-            rev_ai_transcription
+            transcriptions,
+            detected_language
         };
 
     } catch (error) {
