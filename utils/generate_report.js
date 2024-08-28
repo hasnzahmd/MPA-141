@@ -7,7 +7,6 @@ import { RunCollectorCallbackHandler } from "langchain/callbacks";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 //import { Sentry } from "@sentry/serverless";
-import { myTemplate } from "./constants.js";
 
 let pool;
 
