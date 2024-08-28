@@ -64,9 +64,10 @@ let client;
 
 const generateFromText = async (transcriptions, language, fields) => {
     const { nova_transcription, whisper_transcription, assembly_ai_transcription, rev_ai_transcription } = transcriptions;
-    client = await pool.connect();
-    console.log("client connected")
     try {
+        client = await pool.connect();
+        console.log("client connected")
+
         if(!!nova_transcription && !! whisper_transcription) {
             const mergingContextResult = await client.query('SELECT * FROM public."constants" WHERE name = $1', ['transcriptionContext']);
             const generationContextResult = await client.query('SELECT * FROM public."constants" WHERE name = $1', ['generationContext']);
@@ -146,8 +147,6 @@ const generateFromText = async (transcriptions, language, fields) => {
 export async function generateStructuredReport(transcriptions, language, fields) {
     try {
         console.log('\n>>>>>> Generating JSON response <<<<<<');
-        console.log('language:', language);
-        
         await getCredentials();
         const response = await generateFromText(transcriptions, language, fields);
 

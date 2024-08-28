@@ -92,7 +92,7 @@ export const transcribeAudio = async (audioBuffer) => {
             convertAudioToTranscript(audioBuffer, "assembly_ai"),
             convertAudioToTranscript(audioBuffer, "rev_ai")
         ]);
-
+        console.log('Language detected:', detected_language)
         console.log('>>>>>> Transcripts generation complete <<<<<<');
         const transcriptions = {
             nova_transcription: nova_transcription.result,
