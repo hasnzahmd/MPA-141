@@ -127,7 +127,7 @@ const generateFromText = async (transcriptions, language, fields) => {
                 whisper_transcription: whisper_transcription,
                 rev_transcription: rev_ai_transcription,
                 assembly_transcription: assembly_ai_transcription,
-                language: language,
+                language,
                 template: reportTemplate,
             },
                 { callbacks: [runCollector] }

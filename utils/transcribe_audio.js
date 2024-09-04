@@ -10,15 +10,13 @@ const assemblyAiClient = new AssemblyAI({
 
 var revAiClient = new RevAiApiClient(process.env.REV_AI_API_KEY);
 
-let detected_language;
-
-const convertAudioToTranscript = async (audioBuffer, model) => {
+const convertAudioToTranscript = async (audioBuffer, model, language) => {
     try {
         if (model == "nova-2" || model == "whisper-large") {
             const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
                 audioBuffer, {
                 model,
-                detect_language: true,
+                language,
                 smart_format: true,
                 numerals: true,
                 dictation: true
@@ -35,17 +33,15 @@ const convertAudioToTranscript = async (audioBuffer, model) => {
         }
 
         if (model == "assembly_ai") {
-            const { text, confidence, error, language_code } = await assemblyAiClient.transcripts.transcribe({
+            const { text, confidence, error } = await assemblyAiClient.transcripts.transcribe({
                 audio: audioBuffer,
-                language_detection: true,
+                language_code: language,
                 format_text: false
             });
 
             if (error) {
                 throw error
             }
-
-            detected_language = language_code;
 
             return {
                 result: text,
@@ -55,7 +51,7 @@ const convertAudioToTranscript = async (audioBuffer, model) => {
         }
 
         if (model == "rev_ai") {
-            var job = await revAiClient.submitJobAudioData(audioBuffer, null, {language_detection: true});
+            var job = await revAiClient.submitJobAudioData(audioBuffer, null, {language});
             let jobStatus = await revAiClient.getJobDetails(job.id);
             
             while (jobStatus.status !== 'transcribed') {
@@ -78,7 +74,7 @@ const convertAudioToTranscript = async (audioBuffer, model) => {
     }
 }
 
-export const transcribeAudio = async (audioBuffer) => {
+export const transcribeAudio = async (audioBuffer, language) => {
     console.log('\n>>>>>> Generating transcripts from audio <<<<<<');
     try {
         const [
@@ -87,12 +83,11 @@ export const transcribeAudio = async (audioBuffer) => {
             assembly_ai_transcription,
             rev_ai_transcription
         ] = await Promise.all([
-            convertAudioToTranscript(audioBuffer, "nova-2"),
-            convertAudioToTranscript(audioBuffer, "whisper-large"),
-            convertAudioToTranscript(audioBuffer, "assembly_ai"),
-            convertAudioToTranscript(audioBuffer, "rev_ai")
+            convertAudioToTranscript(audioBuffer, "nova-2", language),
+            convertAudioToTranscript(audioBuffer, "whisper-large", language),
+            convertAudioToTranscript(audioBuffer, "assembly_ai", language),
+            convertAudioToTranscript(audioBuffer, "rev_ai", language)
         ]);
-        console.log('Language detected:', detected_language)
         console.log('>>>>>> Transcripts generation complete <<<<<<');
         const transcriptions = {
             nova_transcription: nova_transcription.result,
@@ -100,10 +95,7 @@ export const transcribeAudio = async (audioBuffer) => {
             assembly_ai_transcription: assembly_ai_transcription.result,
             rev_ai_transcription: rev_ai_transcription.result,
         };
-        return {
-            transcriptions,
-            detected_language
-        };
+        return transcriptions;
 
     } catch (error) {
         console.error('Error generating transcript from audio');
