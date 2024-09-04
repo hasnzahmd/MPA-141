@@ -48,7 +48,7 @@ This project provides an API for generating structured medical reports from audi
 
 ### Technologies Used
 
-Node.js: Backend runtime environment.
-Express: Web framework for handling API requests.
-Deepgram, Rev AI, and Assembly AI for converting audio to text.
-LangChain, Anthropic AI, and OpenAI for report creation.
+1. Node.js: Backend runtime environment.
+2. Express: Web framework for handling API requests.
+3. Deepgram, Rev AI, and Assembly AI for converting audio to text.
+4. LangChain, Anthropic AI, and OpenAI for report creation.
