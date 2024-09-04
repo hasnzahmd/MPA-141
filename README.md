@@ -24,7 +24,9 @@ body: {
 "audio_url": "<https://example.com/audio/doctor_notes.mp3>",
 "fields": ["diagnosis", "findings", "medication", "procedure", "recipes", "therapy"],
 },
+```
 
+```json
 params: {
 "audio_language": "en",
 "report_language": "spanish"
