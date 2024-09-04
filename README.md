@@ -19,15 +19,19 @@ This project provides an API for generating structured medical reports from audi
 
 ### Request
 
+Body:
+
 ```json
-body: {
+{
 "audio_url": "<https://example.com/audio/doctor_notes.mp3>",
 "fields": ["diagnosis", "findings", "medication", "procedure", "recipes", "therapy"],
 },
 ```
 
+Params:
+
 ```json
-params: {
+{
 "audio_language": "en",
 "report_language": "spanish"
 }
