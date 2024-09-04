@@ -7,11 +7,14 @@ export const reportRouter = express.Router();
 
 reportRouter.post('/', async (req, res) => {
     const { audio_url, fields } = req.body;
+    const { audio_language, report_language } = req.query;
+    console.log('Audio language', audio_language);
+    console.log('Report language', report_language);
 
     try {
-        const audioFilePath = await fetchAudioFile(audio_url); 
-        const transcript = await transcribeAudio(audioFilePath);
-        const structuredReport = await generateStructuredReport(transcript, fields);
+        const audioBuffer = await fetchAudioFile(audio_url);
+        const transcriptions = await transcribeAudio(audioBuffer, audio_language);
+        const structuredReport = await generateStructuredReport(transcriptions, report_language, fields);
 
         res.status(200).json(structuredReport);
     } catch (error) {
