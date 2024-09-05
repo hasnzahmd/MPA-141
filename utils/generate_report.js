@@ -1,74 +1,15 @@
-import pg from 'pg';
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { RunCollectorCallbackHandler } from "langchain/callbacks";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
-//import { Sentry } from "@sentry/serverless";
+import { v4 as uuidv4 } from 'uuid';
 
-let pool;
-
-const getCredentials = async () => {
-    const secret_name = process.env.RDS_SECRET;
-    // const sentry_secret_name = process.env.SENTRY_SECRET;
-
-    const client = new SecretsManagerClient({
-        region: "eu-central-1",
-    });
-    let response;
-    try {
-        response = await client.send(
-            new GetSecretValueCommand({
-                SecretId: secret_name,
-                VersionStage: "AWSCURRENT",
-            })
-        );
-
-        // const sentry_response = await client.send(
-        //     new GetSecretValueCommand({
-        //         SecretId: sentry_secret_name,
-        //         VersionStage: "AWSCURRENT", // VersionStage defaults to AWSCURRENT if unspecified
-        //     })
-        // );
-
-        const respObj = JSON.parse(response.SecretString);
-        // const sentryRespObj = JSON.parse(sentry_response.SecretString);
-
-        // Sentry.AWSLambda.init({
-        //     dsn: sentryRespObj.sentry_dsn_key,
-        //     tracesSampleRate: 1.0,
-        // });
-
-        // console.log("sentry response obj ", sentryRespObj);
-
-        const connectObj = {
-            user: respObj.username,
-            host: 'localhost',
-            database: respObj.dbname,
-            password: respObj.password,
-            port: 5433,
-            ssl: process.env.STAGE === "production",
-        };
-        pool = new pg.Pool(connectObj);
-        console.log("pool created");
-        return connectObj;
-    } catch (error) {
-        console.log("secrete manager error ", error);
-        throw error;
-    }
-};
-
-let client;
-
-const generateFromText = async (transcriptions, language, fields) => {
+const generateFromText = async ({ transcriptions, language, fields, clientID, client }) => {
     const { nova_transcription, whisper_transcription, assembly_ai_transcription, rev_ai_transcription } = transcriptions;
     try {
-        client = await pool.connect();
-        console.log("client connected")
-
-        if(!!nova_transcription && !! whisper_transcription) {
+        if (!!nova_transcription && !!whisper_transcription) {
             const mergingContextResult = await client.query('SELECT * FROM public."constants" WHERE name = $1', ['transcriptionContext']);
             const generationContextResult = await client.query('SELECT * FROM public."constants" WHERE name = $1', ['generationContext']);
             // console.log(">> mergingContextResult.rows[0]: ", mergingContextResult.rows[0]);
@@ -127,14 +68,24 @@ const generateFromText = async (transcriptions, language, fields) => {
                 whisper_transcription: whisper_transcription,
                 rev_transcription: rev_ai_transcription,
                 assembly_transcription: assembly_ai_transcription,
-                language,
+                language: language,
                 template: reportTemplate,
             },
                 { callbacks: [runCollector] }
             );
 
-            if(!!result) {
-                //const runID = runCollector.tracedRuns[0].id;
+            if (!!result) {
+                const runID = runCollector.tracedRuns[0].id;
+                const prompt_tokens = runCollector.tracedRuns[0].prompt_tokens;
+                const completion_tokens = runCollector.tracedRuns[0].completion_tokens;
+
+                const id = uuidv4();
+                const queryResult = client.query(
+                    'INSERT INTO public."runs" (id, run_id, client_id, total_prompt_tokens, total_completion_tokens) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                    [id, runID, clientID, prompt_tokens, completion_tokens]
+                );
+                console.log("queryResult: ", queryResult.rows[0]);
+
                 return result;
             }
         }
@@ -144,15 +95,14 @@ const generateFromText = async (transcriptions, language, fields) => {
     }
 }
 
-export async function generateStructuredReport(transcriptions, language, fields) {
+export async function generateStructuredReport(data) {
     try {
         console.log('\n>>>>>> Generating JSON response <<<<<<');
-        await getCredentials();
-        const response = await generateFromText(transcriptions, language, fields);
+        const response = await generateFromText(data);
 
         let content;
         response.startsWith("```json") ? content = response.slice(7, -3) : content = response;
-    
+
         const structuredReport = JSON.parse(content);
 
         console.log('Structured report:', structuredReport);

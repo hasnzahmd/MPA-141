@@ -24,7 +24,8 @@
     "node-fetch": "^3.3.2",
     "openai": "^4.56.0",
     "pg": "^8.12.0",
-    "revai-node-sdk": "^3.8.5"
+    "revai-node-sdk": "^3.8.5",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "dotenv": "^16.4.5",
