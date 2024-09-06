@@ -38,10 +38,10 @@ export const getCredentials = async () => {
 
         const connectObj = {
             user: respObj.username,
-            host: respObj.proxyHost,
+            host: 'localhost',
             database: respObj.dbname,
             password: respObj.password,
-            port: respObj.port,
+            port: 5433,
             ssl: process.env.STAGE === "production",
         };
         pool = new pg.Pool(connectObj);

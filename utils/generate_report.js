@@ -6,7 +6,7 @@ import { RunCollectorCallbackHandler } from "langchain/callbacks";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { v4 as uuidv4 } from 'uuid';
 
-const generateFromText = async ({ transcriptions, language, fields, clientID, client }) => {
+const generateFromText = async ({ transcriptions, report_language: language, fields, clientID, client }) => {
     const { nova_transcription, whisper_transcription, assembly_ai_transcription, rev_ai_transcription } = transcriptions;
     try {
         if (!!nova_transcription && !!whisper_transcription) {
@@ -20,7 +20,7 @@ const generateFromText = async ({ transcriptions, language, fields, clientID, cl
 
             const reportTemplateResult = await client.query('SELECT value FROM public."constants" WHERE name = $1', ["structured_report_template"]);
             const reportTemplateResponse = reportTemplateResult.rows[0].value;
-            const reportTemplate = reportTemplateResponse.replace("{fields}", fields.join(', '));;
+            const reportTemplate = reportTemplateResponse.replace("{fields}", fields.join(', '));
 
             const mergingPrompt = PromptTemplate.fromTemplate(mergingContext);
             const generationPrompt = PromptTemplate.fromTemplate(generationContext);
@@ -35,18 +35,63 @@ const generateFromText = async ({ transcriptions, language, fields, clientID, cl
 
             const service_name = process.env.SERVICE_NAME;
 
-            if (service_name === 'anthropic') {
-                mergeConfig.modelName = ANTHROPIC_MODEL;
-                mergingModel = new ChatAnthropic(mergeConfig);
+            let totalCompletionTokens = 0;
+            let totalPromptTokens = 0;
 
-                generationConfig.modelName = ANTHROPIC_MODEL;
-                generationModel = new ChatAnthropic(generationConfig);
+            if (service_name === 'anthropic') {
+                mergingModel = new ChatAnthropic({
+                    ...mergeConfig,
+                    callbacks: [
+                        {
+                            handleLLMEnd: (output, runId, parentRunId, tags) => {
+                                const { input_tokens, output_tokens } = output.llmOutput?.usage;
+                                totalPromptTokens += input_tokens ?? 0;
+                                totalCompletionTokens += output_tokens ?? 0;
+                            },
+                        },
+                    ]
+                });
+
+                generationModel = new ChatAnthropic({
+                    ...generationConfig,
+                    callbacks: [
+                        {
+                            handleLLMEnd: (output, runId, parentRunId, tags) => {
+                                const { input_tokens, output_tokens } = output.llmOutput?.usage;
+                                totalPromptTokens += input_tokens ?? 0;
+                                totalCompletionTokens += output_tokens ?? 0;
+                            },
+                        },
+                    ]
+                });
             } else {
                 mergeConfig.modelName = OPENAI_MODEL;
-                mergingModel = new ChatOpenAI(mergeConfig);
+                mergingModel = new ChatOpenAI({
+                    callbacks: [
+                        {
+                            handleLLMEnd: (output, runId, parentRunId, tags) => {
+                                const { completionTokens, promptTokens, totalTokens } = output.llmOutput?.tokenUsage;
+                                totalPromptTokens += promptTokens ?? 0;
+                                totalCompletionTokens += completionTokens ?? 0;
+                            },
+                        },
+                    ],
+                    ...mergeConfig
+                });
 
                 generationConfig.modelName = OPENAI_MODEL;
-                generationModel = new ChatOpenAI(generationConfig);
+                generationModel = new ChatOpenAI({
+                    callbacks: [
+                        {
+                            handleLLMEnd: (output, runId, parentRunId, tags) => {
+                                const { completionTokens, promptTokens, totalTokens } = output.llmOutput?.tokenUsage;
+                                totalPromptTokens += promptTokens ?? 0;
+                                totalCompletionTokens += completionTokens ?? 0;
+                            },
+                        },
+                    ],
+                    ...generationConfig
+                });
             }
 
             const mergingChain = mergingPrompt.pipe(mergingModel).pipe(new StringOutputParser());
@@ -76,21 +121,21 @@ const generateFromText = async ({ transcriptions, language, fields, clientID, cl
 
             if (!!result) {
                 const runID = runCollector.tracedRuns[0].id;
-                const prompt_tokens = runCollector.tracedRuns[0].prompt_tokens;
-                const completion_tokens = runCollector.tracedRuns[0].completion_tokens;
+                console.log('totalPromptTokens:', totalPromptTokens);
+                console.log('totalCompletionTokens:', totalCompletionTokens);
 
                 const id = uuidv4();
-                const queryResult = client.query(
-                    'INSERT INTO public."runs" (id, run_id, client_id, total_prompt_tokens, total_completion_tokens) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                    [id, runID, clientID, prompt_tokens, completion_tokens]
+                const created_at = new Date();
+                const queryResult = await client.query(
+                    'INSERT INTO public."runs" (id, run_id, client_id, total_prompt_tokens, total_completion_tokens, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+                    [id, runID, clientID, totalPromptTokens, totalCompletionTokens, created_at]
                 );
-                console.log("queryResult: ", queryResult.rows[0]);
-
+                console.log('Query result:', queryResult.rows[0]);
+                console.log('result:', result);
                 return result;
             }
         }
     } catch (error) {
-        //console.error('Error generating medical report');
         throw error;
     }
 }
@@ -102,9 +147,13 @@ export async function generateStructuredReport(data) {
 
         let content;
         response.startsWith("```json") ? content = response.slice(7, -3) : content = response;
-
-        const structuredReport = JSON.parse(content);
-
+        let structuredReport;
+        try {
+            structuredReport = JSON.parse(content);
+        } catch (error) {
+            console.error('Error parsing JSON:', error);
+            struct  
+        }
         console.log('Structured report:', structuredReport);
         console.log('\n>>>>>> Respone generated <<<<<<');
         return structuredReport;
