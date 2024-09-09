@@ -131,7 +131,6 @@ const generateFromText = async ({ transcriptions, report_language: language, fie
                     [id, runID, clientID, totalPromptTokens, totalCompletionTokens, created_at]
                 );
                 console.log('Query result:', queryResult.rows[0]);
-                console.log('result:', result);
                 return result;
             }
         }
@@ -144,17 +143,22 @@ export async function generateStructuredReport(data) {
     try {
         console.log('\n>>>>>> Generating JSON response <<<<<<');
         const response = await generateFromText(data);
+        console.log('response: ', response);
 
         let content;
-        response.startsWith("```json") ? content = response.slice(7, -3) : content = response;
-        let structuredReport;
-        try {
-            structuredReport = JSON.parse(content);
-        } catch (error) {
-            console.error('Error parsing JSON:', error);
-            struct  
+        if (response.startsWith("{")) {
+            content = response;
+        } else if (response.startsWith("```json")) {
+            content = response.slice(7, -3);
+        } else {
+            content = response.replace(/<.*?>/g, "").trim();
+            if(content.startsWith("```json")) {
+                content = content.slice(7, -3);
+            }
         }
-        console.log('Structured report:', structuredReport);
+        
+        let structuredReport = JSON.parse(content);
+        console.log('structured report:', structuredReport);
         console.log('\n>>>>>> Respone generated <<<<<<');
         return structuredReport;
 
