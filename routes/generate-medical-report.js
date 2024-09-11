@@ -9,8 +9,16 @@ export const reportRouter = express.Router();
 reportRouter.post('/', async (req, res) => {
     const apiKey = req.headers['x-api-key'];
     
-    const { pool } = await getCredentials();
-    let client = await pool.connect();
+    let db;
+    try {
+        const { pool } = await getCredentials();
+        db = pool;
+    } catch (error) {
+        console.error('Error getting credentials:', error.message);
+        throw error;
+    }
+
+    const client = await db.connect();
     console.log("client connected");
     
     const apiKeyResult = await client.query('SELECT * FROM public."clients" WHERE api_key = $1', [apiKey]);
